@@ -13,10 +13,10 @@ st.title("📦 Prediksi Waktu Pengiriman Makanan")
 st.sidebar.header("Masukkan Informasi Pengiriman")
 
 # Input Kategorikal
-weather = st.sidebar.selectbox("Kondisi Cuaca", ["Clear", "Rainy", "Fog", "Snow"])
-traffic = st.sidebar.selectbox("Tingkat Kemacetan", ["Low", "Medium", "High", "Jam"])
-vehicle = st.sidebar.selectbox("Jenis Kendaraan", ["Motorcycle", "Car", "Bicycle"])
-time_of_day = st.sidebar.selectbox("Waktu Pengiriman", ["Pagi", "Siang", "Sore", "Malam"])
+weather = st.sidebar.selectbox("Kondisi Cuaca", ["Clear", "Rainy", "Snowy", "Foggy", "Windy"])
+traffic = st.sidebar.selectbox("Tingkat Kemacetan", ["Low", "Medium", "High"])
+vehicle = st.sidebar.selectbox("Jenis Kendaraan", ["Bike", "Scooter", "Car"])
+time_of_day = st.sidebar.selectbox("Waktu Pengiriman", ["Morning", "Afternoon", "Evening", "Night"])
 
 # Input Numerikal
 experience = st.sidebar.slider("Pengalaman Kurir (tahun)", 0, 20, 2)
@@ -25,13 +25,13 @@ prep_time = st.sidebar.slider("Waktu Persiapan Makanan (menit)", 0, 120, 15)
 
 # Buat DataFrame Input
 input_df = pd.DataFrame({
-    'courier_experience_yrs': [experience],
+    'Courier_Experience_yrs': [experience],
     'Distance_km': [distance],
     'Preparation_Time_min': [prep_time],
-    'weather': [weather],
-    'traffic_level': [traffic],
-    'vehicle_type': [vehicle],
-    'time_of_day': [time_of_day]
+    'Weather': [weather],
+    'Traffic_Level': [traffic],
+    'Vehicle_Type': [vehicle],
+    'Time_of_Day': [time_of_day]
 })
 
 # One-hot Encoding
@@ -39,11 +39,11 @@ input_encoded = pd.get_dummies(input_df)
 
 # Pastikan kolom sama seperti saat training
 expected_cols = [
-    'courier_experience_yrs', 'Distance_km', 'Preparation_Time_min',
-    'weather_Clear', 'weather_Fog', 'weather_Rainy', 'weather_Snow',
-    'traffic_level_High', 'traffic_level_Jam', 'traffic_level_Low', 'traffic_level_Medium',
-    'vehicle_type_Bicycle', 'vehicle_type_Car', 'vehicle_type_Motorcycle',
-    'time_of_day_Malam', 'time_of_day_Pagi', 'time_of_day_Siang', 'time_of_day_Sore'
+    'Courier_Experience_yrs', 'Distance_km', 'Preparation_Time_min',
+    'Weather_Clear', 'Weather_Rainy', 'Weather_Snowy', 'Weather_Foggy', 'Weather_Windy',
+    'Traffic_Level_Low', 'Traffic_Level_Medium', 'Traffic_Level_High',
+    'Vehicle_Type_Bike', 'Vehicle_Type_Scooter', 'Vehicle_Type_Car,
+    'Time_of_Day_Morning', 'Time_of_Day_Afternoon', 'Time_of_Day_Evening', 'Time_of_Day_Night'
 ]
 for col in expected_cols:
     if col not in input_encoded.columns:
