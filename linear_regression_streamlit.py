@@ -21,10 +21,16 @@ except Exception as e:
 st.title("🚚 Prediksi Waktu Pengiriman Makanan")
 st.markdown("Masukkan detail berikut untuk memperkirakan waktu pengiriman:")
 
-weather = st.selectbox("Cuaca", ["Clear", "Rainy", "Foggy", "Windy"])
-traffic = st.selectbox("Tingkat Lalu Lintas", ["Low", "Medium", "High"])
-vehicle = st.selectbox("Jenis Kendaraan", ["Bike", "Scooter", "Car"])
-time_of_day = st.selectbox("Waktu Pengiriman", ["Morning", "Afternoon", "Evening", "Night"])
+# Ambil kategori dari model_columns
+weather_options = sorted({col.replace("Weather_", "") for col in model_columns if col.startswith("Weather_")})
+traffic_options = sorted({col.replace("Traffic_Level_", "") for col in model_columns if col.startswith("Traffic_Level_")})
+vehicle_options = sorted({col.replace("Vehicle_Type_", "") for col in model_columns if col.startswith("Vehicle_Type_")})
+time_options = sorted({col.replace("Time_of_Day_", "") for col in model_columns if col.startswith("Time_of_Day_")})
+
+weather = st.selectbox("Cuaca", weather_options)
+traffic = st.selectbox("Tingkat Lalu Lintas", traffic_options)
+vehicle = st.selectbox("Jenis Kendaraan", vehicle_options)
+time_of_day = st.selectbox("Waktu Pengiriman", time_options)
 experience = st.number_input("Pengalaman Kurir (tahun)", min_value=0, max_value=30, value=2)
 distance = st.number_input("Jarak Pengiriman (km)", min_value=0.0, value=5.0, step=0.1)
 prep_time = st.number_input("Waktu Persiapan Makanan (menit)", min_value=0, value=10)
