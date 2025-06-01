@@ -42,7 +42,7 @@ expected_cols = [
     'Courier_Experience_yrs', 'Distance_km', 'Preparation_Time_min',
     'Weather_Clear', 'Weather_Rainy', 'Weather_Snowy', 'Weather_Foggy', 'Weather_Windy',
     'Traffic_Level_Low', 'Traffic_Level_Medium', 'Traffic_Level_High',
-    'Vehicle_Type_Bike', 'Vehicle_Type_Scooter', 'Vehicle_Type_Car,
+    'Vehicle_Type_Bike', 'Vehicle_Type_Scooter', 'Vehicle_Type_Car',
     'Time_of_Day_Morning', 'Time_of_Day_Afternoon', 'Time_of_Day_Evening', 'Time_of_Day_Night'
 ]
 for col in expected_cols:
