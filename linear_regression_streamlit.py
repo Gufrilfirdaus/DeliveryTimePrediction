@@ -72,13 +72,12 @@ with st.sidebar:
     This predictive model uses machine learning to estimate food delivery times 
     based on historical data and key factors that affect delivery duration.
     """)
-    
     st.markdown("---")
     st.markdown(
         "<p style='text-align: center; font-size: 12px; color: grey;'>© 2025 Muhammad Gufril Firdaus</p>",
         unsafe_allow_html=True
     )
-    
+
 # — Main Content
 st.header("Delivery Time Prediction")
 
@@ -88,37 +87,24 @@ with st.form("predict_form"):
     
     with col1:
         st.subheader("Route Information")
-        distance = st.number_input("Distance (km)", 
-                                 min_value=0.5, 
-                                 max_value=50.0, 
-                                 value=5.0, 
-                                 step=0.5)
-        traffic = st.selectbox("Traffic Level", 
-                             ['Low', 'Medium', 'High'])
-        weather = st.selectbox("Weather Condition", 
-                             sorted(df['Weather'].unique()))
+        distance = st.number_input("Distance (km)", min_value=0.5, max_value=50.0, value=5.0, step=0.5)
+        traffic = st.selectbox("Traffic Level", ['Low', 'Medium', 'High'])
+        weather = st.selectbox("Weather Condition", sorted(df['Weather'].unique()))
         
     with col2:
         st.subheader("Delivery Details")
-        vehicle = st.selectbox("Vehicle Type", 
-                             sorted(df['Vehicle_Type'].unique()))
-        experience = st.selectbox("Courier Experience (years)", 
-                                sorted(df['Courier_Experience_yrs'].unique()))
-        prep_time = st.number_input("Preparation Time (minutes)", 
-                          min_value=0,
-                          max_value=120,
-                          value=int(df['Preparation_Time_min'].median()),
-                          step=1)       
-        time_of_day = st.selectbox("Time of Day", 
-                                 sorted(df['Time_of_Day'].unique()))
+        vehicle = st.selectbox("Vehicle Type", sorted(df['Vehicle_Type'].unique()))
+        experience = st.selectbox("Courier Experience (years)", sorted(df['Courier_Experience_yrs'].unique()))
+        prep_time = st.number_input("Preparation Time (minutes)", min_value=0, max_value=120,
+                                    value=int(df['Preparation_Time_min'].median()), step=1)       
+        time_of_day = st.selectbox("Time of Day", sorted(df['Time_of_Day'].unique()))
     
-    submitted = st.form_submit_button("Predict Delivery Time", 
-                                    type="primary")
+    submitted = st.form_submit_button("Predict Delivery Time", type="primary")
 
 if submitted:
     # Prepare input data
-    traffic_map = {'Low':0, 'Medium':1, 'High':2}
-    data = {c:0 for c in cols}
+    traffic_map = {'Low': 0, 'Medium': 1, 'High': 2}
+    data = {c: 0 for c in cols}
     data.update({
         "Distance_km": distance,
         "Courier_Experience_yrs": experience,
@@ -128,63 +114,83 @@ if submitted:
         f"Vehicle_Type_{vehicle}": 1,
         f"Time_of_Day_{time_of_day}": 1,
     })
-    
+
     # Make prediction
     input_df = pd.DataFrame([data])[cols]
     x_scaled = scaler.transform(input_df)
     pred = model.predict(x_scaled)[0]
     avg = df["Delivery_Time_min"].mean()
-    
-    # Display results
+
+    # Results section
     st.markdown("---")
     st.subheader("Results")
-    
+
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("""
-        <div style="background-color:#f0f8ff;padding:2rem;border-radius:10px;text-align:center;box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color:#333;">📦 Estimated Delivery Time</h3>
-            <h1 style="color:#1f77b4;">{:.1f} minutes</h1>
+        st.markdown(f"""
+        <div style="background-color:#f0f8ff;padding:2rem;border-radius:10px;text-align:center;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color:#333;">Estimated Delivery Time</h3>
+            <h1 style="color:#1f77b4;">{pred:.1f} minutes</h1>
         </div>
-        """.format(pred), unsafe_allow_html=True)
-    
+        """, unsafe_allow_html=True)
+
     with col2:
         delta_color = "#28a745" if pred - avg < 0 else "#dc3545"
         delta_sign = "+" if pred - avg >= 0 else ""
         st.markdown(f"""
-        <div style="background-color:#fff5f5;padding:2rem;border-radius:10px;text-align:center;box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color:#333;">📊 Average Delivery Time</h3>
+        <div style="background-color:#fff5f5;padding:2rem;border-radius:10px;text-align:center;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color:#333;">Average Delivery Time</h3>
             <h1 style="color:#6c757d;">{avg:.1f} minutes</h1>
             <p style="color:{delta_color}; font-size:18px;">{delta_sign}{pred - avg:.1f} minutes from average</p>
         </div>
         """, unsafe_allow_html=True)
-    
+
     # Feature importance
     st.markdown("---")
     st.subheader("Top Influencing Factors")
-    
+
     coeffs = pd.DataFrame({"Feature": cols, "Impact": model.coef_})
     coeffs["Absolute_Impact"] = coeffs["Impact"].abs()
     top_features = coeffs.sort_values("Absolute_Impact", ascending=False).head(5)
-    
-    # Format feature names
+
+    # Format readable names
     feature_names = {
         "Distance_km": "Distance (km)",
-        "Preparation_Time_min": "Prep Time (min)",
+        "Preparation_Time_min": "Preparation Time (min)",
         "Traffic_Level": "Traffic Level",
-        "Courier_Experience_yrs": "Courier Exp (yrs)",
+        "Courier_Experience_yrs": "Courier Experience (years)",
         **{f"Weather_{w}": f"Weather: {w}" for w in df['Weather'].unique()},
         **{f"Vehicle_Type_{v}": f"Vehicle: {v}" for v in df['Vehicle_Type'].unique()},
-        **{f"Time_of_Day_{t}": f"Time: {t}" for t in df['Time_of_Day'].unique()}
+        **{f"Time_of_Day_{t}": f"Time of Day: {t}" for t in df['Time_of_Day'].unique()}
     }
-    
     top_features["Feature"] = top_features["Feature"].map(feature_names)
-    st.dataframe(top_features[["Feature", "Impact"]].set_index("Feature")
-                .style.format("{:.2f}").background_gradient(cmap="RdBu", axis=0))
+
+    # Show table
+    st.dataframe(
+        top_features[["Feature", "Impact"]].set_index("Feature")
+        .style.format("{:.2f}").background_gradient(cmap="RdBu", axis=0)
+    )
+
+    # Bar chart
+    st.markdown("### Visual Impact Chart")
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.barplot(
+        data=top_features,
+        y="Feature",
+        x="Impact",
+        palette="coolwarm",
+        ax=ax
+    )
+    ax.set_title("Top 5 Feature Impacts on Delivery Time", fontsize=12)
+    ax.set_xlabel("Impact Coefficient")
+    ax.set_ylabel("")
+    st.pyplot(fig)
 
     st.markdown("---")
-        st.markdown(
-            "<p style='text-align: center; font-size: 12px; color: grey;'>© 2025 Muhammad Gufril Firdaus</p>",
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        "<p style='text-align: center; font-size: 12px; color: grey;'>© 2025 Muhammad Gufril Firdaus</p>",
+        unsafe_allow_html=True
+    )
