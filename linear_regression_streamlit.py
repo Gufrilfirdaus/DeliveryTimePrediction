@@ -9,9 +9,6 @@ import seaborn as sns
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 
-# Set config harus paling atas
-st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
-
 @st.cache_resource
 def load_model():
     base = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +30,7 @@ model, scaler, cols = load_model()
 df = load_data()
 
 def preprocess_input(input_df):
-    categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']
+    categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type']
     
     preprocessor = ColumnTransformer(
         transformers=[
@@ -42,18 +39,14 @@ def preprocess_input(input_df):
         remainder='passthrough'
     )
     
-    # Fit-transform
     processed_data = preprocessor.fit_transform(input_df)
-
-    # Ambil nama kolom setelah encoding
     feature_names = preprocessor.get_feature_names_out()
-    
-    # Konversi ke DataFrame
     processed_df = pd.DataFrame(processed_data.toarray(), columns=feature_names)
-
+    
     return processed_df
 
 def main():
+    st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
     st.title("🍔 Food Delivery Time Prediction")
 
     st.markdown("""
@@ -61,8 +54,7 @@ def main():
     - **Distance**
     - **Preparation Time**
     - **Courier Experience**
-    - **Weather**, **Traffic**, **Vehicle Type**
-    - **Time of Day**
+    - **Weather**, **Traffic**, and **Vehicle Type**
     """)
 
     st.header("Enter Delivery Parameters")
@@ -77,7 +69,6 @@ def main():
         weather = st.selectbox("Weather Conditions", ["Clear", "Foggy", "Rainy", "Snowy", "Windy"])
         traffic = st.selectbox("Traffic Level", ["Low", "Medium", "High"])
         vehicle = st.selectbox("Vehicle Type", ["Scooter", "Bike", "Car"])
-        time_of_day = st.selectbox("Time of Day", ["Morning", "Afternoon", "Evening", "Night"])
 
     predict_btn = st.button("Predict Delivery Time", type="primary")
 
@@ -88,8 +79,7 @@ def main():
             'Courier_Experience_yrs': [courier_exp],
             'Weather': [weather],
             'Traffic_Level': [traffic],
-            'Vehicle_Type': [vehicle],
-            'Time_of_Day': [time_of_day]
+            'Vehicle_Type': [vehicle]
         })
 
         processed_input = preprocess_input(input_data)
