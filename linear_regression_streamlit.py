@@ -1,165 +1,133 @@
-import os
 import streamlit as st
 import pandas as pd
 import joblib
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
 
-# — Page Config
-st.set_page_config(
-    page_title="Food Delivery Time Prediction", 
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Custom CSS
-st.markdown("""
-<style>
-    .metric-card {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
-    }
-    .form-container {
-        background: white;
-        border-radius: 10px;
-        padding: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# — Load Model and Data
+# Load the trained model (replace with your actual model file)
 @st.cache_resource
 def load_model():
-    base = os.path.dirname(os.path.abspath(__file__))
-    model = joblib.load(os.path.join(base, "linear_reg_model.pkl"))
-    scaler = joblib.load(os.path.join(base, "scaler.pkl"))
-    cols = joblib.load(os.path.join(base, "linear_reg_model_columns.pkl"))
-    return model, scaler, cols
+    try:
+        model = joblib.load('delivery_time_model.pkl')  # Change to your model file
+        return model
+    except FileNotFoundError:
+        st.error("Model file not found. Please ensure 'delivery_time_model.pkl' exists.")
+        return None
 
-@st.cache_data
-def load_data():
-    base = os.path.dirname(os.path.abspath(__file__))
-    df = pd.read_csv(os.path.join(base, "Food_Delivery_Times.csv"))
-    df['Courier_Experience_yrs'].fillna(df['Courier_Experience_yrs'].median(), inplace=True)
-    for c in ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']:
-        df[c].fillna(df[c].mode()[0], inplace=True)
-    return df
+# Preprocessing function (should match your training preprocessing)
+def preprocess_input(input_df):
+    # Define categorical columns (should match your training setup)
+    categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type']
+    
+    # Create transformer (should match your training setup)
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+        ],
+        remainder='passthrough'
+    )
+    
+    # Fit and transform (in a real app, you should pre-fit the encoder during training)
+    processed_data = preprocessor.fit_transform(input_df)
+    return processed_data
 
-model, scaler, cols = load_model()
-df = load_data()
-
-# — Sidebar
-with st.sidebar:
-    st.title("About")
+# Main app function
+def main():
+    st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
+    
+    # Header
+    st.title("🍔 Food Delivery Time Prediction")
     st.markdown("""
-    Predict food delivery times based on:
-    - Distance
-    - Weather conditions
-    - Traffic levels
-    - Vehicle type
-    - Courier experience
-    - Preparation time
+    Predict delivery time based on:
+    - **Distance** between restaurant and delivery location
+    - Current **weather conditions**
+    - Road **traffic levels**
+    - Delivery **vehicle type**
+    - **Courier experience**
+    - **Preparation time**
+    """)
+    
+    # Sidebar with input controls
+    with st.sidebar:
+        st.header("Input Parameters")
+        
+        distance = st.slider("Distance (km)", 0.5, 20.0, 5.0, 0.1)
+        prep_time = st.slider("Preparation Time (minutes)", 5, 30, 15)
+        courier_exp = st.slider("Courier Experience (years)", 0, 10, 2)
+        
+        weather = st.selectbox(
+            "Weather Conditions",
+            ["Clear", "Foggy", "Rainy", "Snowy", "Windy"]
+        )
+        
+        traffic = st.selectbox(
+            "Traffic Level",
+            ["Low", "Medium", "High"]
+        )
+        
+        vehicle = st.selectbox(
+            "Vehicle Type",
+            ["Scooter", "Bike", "Car"]
+        )
+        
+        predict_btn = st.button("Predict Delivery Time")
+    
+    # Main content area
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        st.subheader("How It Works")
+        st.markdown("""
+        This predictive model uses machine learning to estimate food delivery times 
+        based on historical data and key factors that affect delivery duration.
+        
+        The model considers:
+        - Route characteristics (distance, traffic)
+        - Environmental conditions (weather)
+        - Delivery resources (vehicle type, courier experience)
+        - Restaurant preparation time
+        """)
+        
+        st.image("https://images.unsplash.com/photo-1585032226651-759b368d7246?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
+                caption="Food Delivery Analysis")
+    
+    # Prediction logic
+    if predict_btn:
+        model = load_model()
+        if model is not None:
+            # Create input DataFrame
+            input_data = pd.DataFrame({
+                'Distance_km': [distance],
+                'Preparation_Time_min': [prep_time],
+                'Courier_Experience_yrs': [courier_exp],
+                'Weather': [weather],
+                'Traffic_Level': [traffic],
+                'Vehicle_Type': [vehicle]
+            })
+            
+            # Preprocess the input
+            processed_input = preprocess_input(input_data)
+            
+            # Make prediction
+            prediction = model.predict(processed_input)
+            
+            # Display result
+            st.success(f"### Predicted Delivery Time: {round(prediction[0], 1)} minutes")
+            
+            # Show interpretation
+            st.info("""
+            **Interpretation Tips:**
+            - Times under 30 minutes: Excellent service
+            - 30-45 minutes: Normal delivery range  
+            - 45-60 minutes: Slightly delayed
+            - Over 60 minutes: Consider optimizing operations
+            """)
+    
+    # Footer
+    st.markdown("---")
+    st.caption("""
+    *Note: Predictions are estimates based on historical data. Actual delivery times may vary.*
     """)
 
-# — Main Content
-st.header("Delivery Time Prediction")
-
-# Input form
-with st.form("predict_form"):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Route Information")
-        distance = st.number_input("Distance (km)", 
-                                 min_value=0.5, 
-                                 max_value=50.0, 
-                                 value=5.0, 
-                                 step=0.5)
-        traffic = st.selectbox("Traffic Level", 
-                             ['Low', 'Medium', 'High'])
-        weather = st.selectbox("Weather Condition", 
-                             sorted(df['Weather'].unique()))
-        
-    with col2:
-        st.subheader("Delivery Details")
-        vehicle = st.selectbox("Vehicle Type", 
-                             sorted(df['Vehicle_Type'].unique()))
-        experience = st.selectbox("Courier Experience (years)", 
-                                sorted(df['Courier_Experience_yrs'].unique()))
-        prep_time = st.number_input("Preparation Time (minutes)", 
-                                  min_value=0,  # Diubah menjadi 0
-                                  max_value=120,  # Contoh batas maksimal
-                                  value=15, 
-                                  step=1)  # Step 1 menit
-        time_of_day = st.selectbox("Time of Day", 
-                                 sorted(df['Time_of_Day'].unique()))
-    
-    submitted = st.form_submit_button("Predict Delivery Time", 
-                                    type="primary")
-
-if submitted:
-    # Prepare input data
-    traffic_map = {'Low':0, 'Medium':1, 'High':2}
-    data = {c:0 for c in cols}
-    data.update({
-        "Distance_km": distance,
-        "Courier_Experience_yrs": experience,
-        "Preparation_Time_min": prep_time,
-        "Traffic_Level": traffic_map[traffic],
-        f"Weather_{weather}": 1,
-        f"Vehicle_Type_{vehicle}": 1,
-        f"Time_of_Day_{time_of_day}": 1,
-    })
-    
-    # Make prediction
-    input_df = pd.DataFrame([data])[cols]
-    x_scaled = scaler.transform(input_df)
-    pred = model.predict(x_scaled)[0]
-    avg = df["Delivery_Time_min"].mean()
-    
-    # Display results
-    st.markdown("---")
-    st.subheader("Results")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Estimated Delivery Time", 
-                 f"{pred:.1f} minutes")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Average Delivery Time", 
-                 f"{avg:.1f} minutes",
-                 delta=f"{pred-avg:+.1f} minutes")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Feature importance
-    st.markdown("---")
-    st.subheader("Top Influencing Factors")
-    
-    coeffs = pd.DataFrame({"Feature": cols, "Impact": model.coef_})
-    coeffs["Absolute_Impact"] = coeffs["Impact"].abs()
-    top_features = coeffs.sort_values("Absolute_Impact", ascending=False).head(5)
-    
-    # Format feature names
-    feature_names = {
-        "Distance_km": "Distance (km)",
-        "Preparation_Time_min": "Prep Time (min)",
-        "Traffic_Level": "Traffic Level",
-        "Courier_Experience_yrs": "Courier Exp (yrs)",
-        **{f"Weather_{w}": f"Weather: {w}" for w in df['Weather'].unique()},
-        **{f"Vehicle_Type_{v}": f"Vehicle: {v}" for v in df['Vehicle_Type'].unique()},
-        **{f"Time_of_Day_{t}": f"Time: {t}" for t in df['Time_of_Day'].unique()}
-    }
-    
-    top_features["Feature"] = top_features["Feature"].map(feature_names)
-    st.dataframe(top_features[["Feature", "Impact"]].set_index("Feature")
-                .style.format("{:.2f}").background_gradient(cmap="RdBu", axis=0))
+if __name__ == "__main__":
+    main()
