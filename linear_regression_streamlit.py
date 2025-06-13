@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
+
 import pandas as pd
 import numpy as np
 import joblib
@@ -29,7 +31,7 @@ df = load_data()
 
 # Preprocessing function
 def preprocess_input(input_df, reference_columns):
-    categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type']
+    categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']
     
     preprocessor = ColumnTransformer(
         transformers=[
@@ -43,7 +45,7 @@ def preprocess_input(input_df, reference_columns):
     
     processed_data = preprocessor.transform(input_df)
     encoded_feature_names = preprocessor.get_feature_names_out()
-    
+
     processed_df = pd.DataFrame(
         processed_data.toarray() if hasattr(processed_data, "toarray") else processed_data,
         columns=encoded_feature_names
@@ -57,8 +59,6 @@ def preprocess_input(input_df, reference_columns):
     return processed_df
 
 def main():
-    st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
-
     st.title("Food Delivery Time Prediction")
     st.markdown("""
     Predict delivery time based on:
@@ -68,6 +68,7 @@ def main():
     - **Vehicle type**
     - **Courier experience**
     - **Preparation time**
+    - **Time of Day**
     """)
 
     st.markdown("---")
@@ -82,17 +83,17 @@ def main():
     col1, col2 = st.columns(2)
 
     with col1:
-        distance = st.slider("Distance (km)", 0.5, 20.0, 5.0, 0.1)
-        prep_time = st.slider("Preparation Time (minutes)", 5, 30, 15)
-        courier_exp = st.slider("Courier Experience (years)", 0, 10, 2)
+        distance = st.number_input("Distance (km)", min_value=0.1, max_value=50.0, value=5.0, step=0.1, format="%.1f")
+        prep_time = st.number_input("Preparation Time (minutes)", min_value=1, max_value=120, value=15, step=1)
+        courier_exp = st.number_input("Courier Experience (years)", min_value=0, max_value=50, value=2, step=1)
 
     with col2:
         weather = st.selectbox("Weather Conditions", ["Clear", "Foggy", "Rainy", "Snowy", "Windy"])
         traffic = st.selectbox("Traffic Level", ["Low", "Medium", "High"])
         vehicle = st.selectbox("Vehicle Type", ["Scooter", "Bike", "Car"])
+        time_of_day = st.selectbox("Time of Day", ["Morning", "Afternoon", "Evening", "Night"])
 
     predict_btn = st.button("Predict Delivery Time", type="primary")
-
 
     if predict_btn:
         input_data = pd.DataFrame({
@@ -101,7 +102,8 @@ def main():
             'Courier_Experience_yrs': [courier_exp],
             'Weather': [weather],
             'Traffic_Level': [traffic],
-            'Vehicle_Type': [vehicle]
+            'Vehicle_Type': [vehicle],
+            'Time_of_Day': [time_of_day]
         })
 
         processed_input = preprocess_input(input_data, cols)
