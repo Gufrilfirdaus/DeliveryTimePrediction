@@ -79,7 +79,7 @@ with st.sidebar:
     )
 
 # — Main Content
-st.header("Delivery Time Prediction")
+st.header("Food Delivery Time Prediction")
 
 # Input form
 with st.form("predict_form"):
