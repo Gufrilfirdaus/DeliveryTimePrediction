@@ -4,15 +4,25 @@ import joblib
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 
-# Load the trained model
 @st.cache_resource
 def load_model():
-    try:
-        model = joblib.load('linear_reg_model.pkl') 
-        return model
-    except FileNotFoundError:
-        st.error("Model file not found. Please ensure 'delivery_time_model.pkl' exists.")
-        return None
+    base = os.path.dirname(os.path.abspath(__file__))
+    model = joblib.load(os.path.join(base, "linear_reg_model.pkl"))
+    scaler = joblib.load(os.path.join(base, "scaler.pkl"))
+    cols = joblib.load(os.path.join(base, "linear_reg_model_columns.pkl"))
+    return model, scaler, cols
+
+@st.cache_data
+def load_data():
+    base = os.path.dirname(os.path.abspath(__file__))
+    df = pd.read_csv(os.path.join(base, "Food_Delivery_Times.csv"))
+    df['Courier_Experience_yrs'].fillna(df['Courier_Experience_yrs'].median(), inplace=True)
+    for c in ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']:
+        df[c].fillna(df[c].mode()[0], inplace=True)
+    return df
+
+model, scaler, cols = load_model()
+df = load_data()
 
 # Preprocessing function
 def preprocess_input(input_df):
