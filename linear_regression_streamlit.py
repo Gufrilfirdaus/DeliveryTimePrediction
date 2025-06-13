@@ -77,6 +77,7 @@ def main():
     based on historical data and key factors that affect delivery duration.
     """)
 
+    st.markdown("---")
     st.header("Enter Delivery Parameters")
     col1, col2 = st.columns(2)
 
@@ -117,7 +118,7 @@ def main():
         """, unsafe_allow_html=True)
 
         # Feature Importance Section
-        st.markdown("###Feature Importance")
+        st.header("Feature Importance")
         try:
             if hasattr(model, "coef_"):
                 importance = model.coef_
