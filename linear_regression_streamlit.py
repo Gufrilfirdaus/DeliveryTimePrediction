@@ -10,7 +10,6 @@ import seaborn as sns
 
 st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
 
-# Load model and scaler
 @st.cache_resource
 def load_model():
     base = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +22,6 @@ def load_model():
         st.error(f"Gagal memuat model: {e}")
         return None, None, None
 
-# Load dataset
 @st.cache_data
 def load_data():
     base = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +38,6 @@ def load_data():
 model, scaler, model_columns = load_model()
 df = load_data()
 
-# Preprocessing input
 def preprocess_input(input_df, model_columns, scaler):
     input_df = input_df[['Distance_km', 'Preparation_Time_min', 'Courier_Experience_yrs',
                          'Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']]
@@ -55,29 +52,37 @@ def preprocess_input(input_df, model_columns, scaler):
                 ['Low', 'Medium', 'High'],
                 ['Scooter', 'Bike', 'Car'],
                 ['Morning', 'Afternoon', 'Evening', 'Night']
-            ]), categorical_features),
+            ], handle_unknown='ignore'), categorical_features),
             ('num', 'passthrough', numerical_features)
         ]
     )
 
     processed_data = preprocessor.fit_transform(input_df)
+    feature_names = preprocessor.get_feature_names_out()
+
+    df_processed = pd.DataFrame(processed_data.toarray() if hasattr(processed_data, 'toarray') else processed_data,
+                                columns=feature_names)
+
+    # Reorder columns to match model_columns and fill missing if any
+    for col in model_columns:
+        if col not in df_processed.columns:
+            df_processed[col] = 0
+    df_processed = df_processed[model_columns]
 
     if scaler is not None:
-        processed_data = scaler.transform(processed_data)
+        df_processed = scaler.transform(df_processed)
 
-    feature_names = preprocessor.get_feature_names_out()
-    return pd.DataFrame(processed_data, columns=feature_names)
+    return pd.DataFrame(df_processed, columns=model_columns)
 
-# Main App
 def main():
-    st.title("Food Delivery Time Prediction")
+    st.title("🍕 Food Delivery Time Prediction")
 
     st.markdown("""
-    Predict delivery time based on:
+    This app predicts delivery time based on:
     - Distance
     - Weather
-    - Traffic
-    - Vehicle
+    - Traffic Level
+    - Vehicle Type
     - Courier Experience
     - Preparation Time
     - Time of Day
@@ -125,7 +130,6 @@ def main():
             </div>
             """, unsafe_allow_html=True)
 
-            # Feature Importance
             st.markdown("### 🔍 Top 5 Feature Importance")
             try:
                 if hasattr(model, "coef_"):
@@ -137,7 +141,7 @@ def main():
 
                 if importance is not None:
                     importance_df = pd.DataFrame({
-                        "Feature": processed_input.columns,
+                        "Feature": model_columns,
                         "Importance": np.abs(importance)
                     }).sort_values(by="Importance", ascending=False).head(5)
 
