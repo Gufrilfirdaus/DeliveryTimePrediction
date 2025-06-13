@@ -140,19 +140,25 @@ if submitted:
     st.subheader("Results")
     
     col1, col2 = st.columns(2)
-    
+
     with col1:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Estimated Delivery Time", 
-                 f"{pred:.1f} minutes")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background-color:#f0f8ff;padding:2rem;border-radius:10px;text-align:center;box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color:#333;">📦 Estimated Delivery Time</h3>
+            <h1 style="color:#1f77b4;">{:.1f} minutes</h1>
+        </div>
+        """.format(pred), unsafe_allow_html=True)
     
     with col2:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Average Delivery Time", 
-                 f"{avg:.1f} minutes",
-                 delta=f"{pred-avg:+.1f} minutes")
-        st.markdown('</div>', unsafe_allow_html=True)
+        delta_color = "#28a745" if pred - avg < 0 else "#dc3545"
+        delta_sign = "+" if pred - avg >= 0 else ""
+        st.markdown(f"""
+        <div style="background-color:#fff5f5;padding:2rem;border-radius:10px;text-align:center;box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color:#333;">📊 Average Delivery Time</h3>
+            <h1 style="color:#6c757d;">{avg:.1f} minutes</h1>
+            <p style="color:{delta_color}; font-size:18px;">{delta_sign}{pred - avg:.1f} minutes from average</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Feature importance
     st.markdown("---")
