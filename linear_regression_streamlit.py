@@ -1,16 +1,12 @@
 import streamlit as st
-st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")  # Harus di paling atas
-
 import pandas as pd
 import numpy as np
 import joblib
 import os
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 
+# Load model, scaler, and columns
 @st.cache_resource
 def load_model():
     base = os.path.dirname(os.path.abspath(__file__))
@@ -24,47 +20,64 @@ def load_data():
     base = os.path.dirname(os.path.abspath(__file__))
     df = pd.read_csv(os.path.join(base, "Food_Delivery_Times.csv"))
     df['Courier_Experience_yrs'].fillna(df['Courier_Experience_yrs'].median(), inplace=True)
-    for c in ['Weather', 'Traffic_Level', 'Vehicle_Type']:
+    for c in ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']:
         df[c].fillna(df[c].mode()[0], inplace=True)
     return df
 
 model, scaler, cols = load_model()
 df = load_data()
 
-def preprocess_input(input_df):
+# Preprocessing function
+def preprocess_input(input_df, reference_columns):
     categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type']
-
+    
     preprocessor = ColumnTransformer(
         transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore', sparse=False), categorical_features)
+            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
         ],
         remainder='passthrough'
     )
+    
+    dummy_df = df[categorical_features + ['Distance_km', 'Preparation_Time_min', 'Courier_Experience_yrs']].dropna()
+    preprocessor.fit(dummy_df)
+    
+    processed_data = preprocessor.transform(input_df)
+    encoded_feature_names = preprocessor.get_feature_names_out()
+    
+    processed_df = pd.DataFrame(
+        processed_data.toarray() if hasattr(processed_data, "toarray") else processed_data,
+        columns=encoded_feature_names
+    )
 
-    processed_data = preprocessor.fit_transform(input_df)
-    feature_names = preprocessor.get_feature_names_out()
-    processed_df = pd.DataFrame(processed_data, columns=feature_names)
-
+    # Pastikan kolom sesuai dengan yang dipakai saat training
+    for col in reference_columns:
+        if col not in processed_df.columns:
+            processed_df[col] = 0
+    processed_df = processed_df[reference_columns]
+    
     return processed_df
 
 def main():
-    st.title("Food Delivery Time Prediction")
+    st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
 
+    st.title("🍔 Food Delivery Time Prediction")
     st.markdown("""
     Predict delivery time based on:
     - **Distance**
-    - **Preparation Time**
-    - **Courier Experience**
-    - **Weather**, **Traffic**, and **Vehicle Type**
+    - **Weather conditions**
+    - **Traffic levels**
+    - **Vehicle type**
+    - **Courier experience**
+    - **Preparation time**
     """)
 
     st.header("Enter Delivery Parameters")
     col1, col2 = st.columns(2)
 
     with col1:
-        distance = st.number_input("Distance (km)", min_value=0.1, max_value=100.0, value=5.0, step=0.1, format="%.1f")
-        prep_time = st.number_input("Preparation Time (minutes)", min_value=1, max_value=120, value=15, step=1)
-        courier_exp = st.number_input("Courier Experience (years)", min_value=0, max_value=50, value=2, step=1)
+        distance = st.slider("Distance (km)", 0.5, 20.0, 5.0, 0.1)
+        prep_time = st.slider("Preparation Time (minutes)", 5, 30, 15)
+        courier_exp = st.slider("Courier Experience (years)", 0, 10, 2)
 
     with col2:
         weather = st.selectbox("Weather Conditions", ["Clear", "Foggy", "Rainy", "Snowy", "Windy"])
@@ -72,6 +85,13 @@ def main():
         vehicle = st.selectbox("Vehicle Type", ["Scooter", "Bike", "Car"])
 
     predict_btn = st.button("Predict Delivery Time", type="primary")
+
+    st.markdown("---")
+    st.subheader("How It Works")
+    st.markdown("""
+    This predictive model uses machine learning to estimate food delivery times 
+    based on historical data and key factors that affect delivery duration.
+    """)
 
     if predict_btn:
         input_data = pd.DataFrame({
@@ -83,7 +103,7 @@ def main():
             'Vehicle_Type': [vehicle]
         })
 
-        processed_input = preprocess_input(input_data)
+        processed_input = preprocess_input(input_data, cols)
         processed_scaled = scaler.transform(processed_input)
         prediction = model.predict(processed_scaled)
 
@@ -96,8 +116,8 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        # Feature Importance
-        st.markdown("### Top 5 Feature Importance")
+        # Feature Importance Section
+        st.markdown("### 🔍 Feature Importance")
         try:
             if hasattr(model, "coef_"):
                 importance = model.coef_
@@ -110,21 +130,13 @@ def main():
                 importance_df = pd.DataFrame({
                     "Feature": processed_input.columns,
                     "Importance": np.abs(importance)
-                }).sort_values(by="Importance", ascending=False).head(5)
+                }).sort_values(by="Importance", ascending=False)
 
-                st.dataframe(importance_df, use_container_width=True)
-
-                fig, ax = plt.subplots(figsize=(6, 3))
-                sns.barplot(data=importance_df, x="Importance", y="Feature", palette="Blues_d", ax=ax)
-                ax.set_title("Top 5 Important Features", fontsize=12)
-                ax.set_xlabel("Coefficient Magnitude")
-                ax.set_ylabel("")
-                st.pyplot(fig)
-
+                st.dataframe(importance_df.head(10), use_container_width=True)
             else:
-                st.info("Model does not support feature importance.")
+                st.info("Model ini tidak mendukung perhitungan feature importance.")
         except Exception as e:
-            st.error(f"Failed to show feature importance: {e}")
+            st.error(f"Gagal menampilkan feature importance: {e}")
 
 if __name__ == "__main__":
     main()
