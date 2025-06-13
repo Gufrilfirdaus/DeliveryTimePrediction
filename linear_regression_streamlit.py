@@ -104,7 +104,7 @@ def main():
             'Traffic_Level': [traffic],
             'Vehicle_Type': [vehicle],
             'Time_of_Day': [time_of_day]
-        }) 
+        })
 
         processed_input = preprocess_input(input_data, cols)
         processed_scaled = scaler.transform(processed_input)
