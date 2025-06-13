@@ -102,13 +102,15 @@ with tab3:
     st.header("Delivery Time Prediction")
     st.markdown("Enter delivery details to estimate the delivery time:")
     
-    # Get categories from model_columns
+    # Manual options based on model training
     weather_options = sorted({col.replace("Weather_", "") for col in model_columns if col.startswith("Weather_")})
-    traffic_options = sorted({col.replace("Traffic_Level_", "") for col in model_columns if col.startswith("Traffic_Level_")})
     vehicle_options = sorted({col.replace("Vehicle_Type_", "") for col in model_columns if col.startswith("Vehicle_Type_")})
     time_options = sorted({col.replace("Time_of_Day_", "") for col in model_columns if col.startswith("Time_of_Day_")})
     
-    # Create two columns for better layout
+    # Traffic as ordinal (not one-hot encoded)
+    traffic_options = ['Low', 'Medium', 'High']
+    traffic_map = {'Low': 0, 'Medium': 1, 'High': 2}
+    
     col1, col2 = st.columns(2)
     
     with col1:
@@ -122,32 +124,28 @@ with tab3:
         distance = st.number_input("Delivery Distance (km)", min_value=0.0, value=5.0, step=0.1)
         prep_time = st.number_input("Food Preparation Time (minutes)", min_value=0, value=10)
     
-    # Prepare input for model
+    # Prepare input for prediction
     input_dict = {col: 0 for col in model_columns}
     
-    # Fill numerical features
+    # Numerical features
     input_dict["Courier_Experience_yrs"] = experience
     input_dict["Distance_km"] = distance
     input_dict["Preparation_Time_min"] = prep_time
+    input_dict["Traffic_Level"] = traffic_map[traffic]  # <--- updated here
     
-    # Fill one-hot encoded categorical features
+    # One-hot encoded features
     input_dict[f"Weather_{weather}"] = 1
-    input_dict[f"Traffic_Level_{traffic}"] = 1
     input_dict[f"Vehicle_Type_{vehicle}"] = 1
     input_dict[f"Time_of_Day_{time_of_day}"] = 1
     
-    # Convert to DataFrame and arrange columns
     input_df = pd.DataFrame([input_dict])
     input_df = input_df[model_columns]
     
     if st.button("Predict Delivery Time"):
         try:
             prediction = model.predict(input_df)[0]
-            
-            # Show prediction with context
             st.success(f"⏱️ Estimated delivery time: **{prediction:.2f} minutes**")
             
-            # Add context about the prediction
             avg_time = df['Delivery_Time_min'].mean()
             diff = prediction - avg_time
             
@@ -156,35 +154,28 @@ with tab3:
             else:
                 st.warning(f"📊 This is {diff:.2f} minutes slower than average ({avg_time:.2f} minutes)")
             
-            # Show feature importance explanation
+            # Show key factors
             st.subheader("Key Factors Affecting This Prediction:")
-            
-            # Get model coefficients (assuming linear regression)
             try:
                 coefficients = model.coef_
                 feature_names = model_columns
-                
-                # Create a DataFrame of feature importances
                 importance_df = pd.DataFrame({
                     'Feature': feature_names,
                     'Impact': coefficients
                 }).sort_values('Impact', ascending=False)
                 
-                # Filter only the features that were set to 1 in our input
                 active_features = [k for k, v in input_dict.items() if v == 1 and k != 'Preparation_Time_min']
-                active_features.extend(['Distance_km', 'Courier_Experience_yrs', 'Preparation_Time_min'])
+                active_features.extend(['Distance_km', 'Courier_Experience_yrs', 'Preparation_Time_min', 'Traffic_Level'])
                 
-                # Show top impacting features for this prediction
                 st.write("Most significant factors for this prediction:")
                 st.dataframe(
                     importance_df[importance_df['Feature'].isin(active_features)]
                     .sort_values('Impact', key=abs, ascending=False)
                     .head(5)
                 )
-                
             except AttributeError:
                 st.write("(Feature importance not available for this model type)")
-            
+                
             st.balloons()
             
         except Exception as e:
