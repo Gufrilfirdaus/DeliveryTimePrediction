@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")  # Harus di paling atas
+
 import pandas as pd
 import numpy as np
 import joblib
@@ -22,7 +24,7 @@ def load_data():
     base = os.path.dirname(os.path.abspath(__file__))
     df = pd.read_csv(os.path.join(base, "Food_Delivery_Times.csv"))
     df['Courier_Experience_yrs'].fillna(df['Courier_Experience_yrs'].median(), inplace=True)
-    for c in ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']:
+    for c in ['Weather', 'Traffic_Level', 'Vehicle_Type']:
         df[c].fillna(df[c].mode()[0], inplace=True)
     return df
 
@@ -31,23 +33,22 @@ df = load_data()
 
 def preprocess_input(input_df):
     categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type']
-    
+
     preprocessor = ColumnTransformer(
         transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+            ('cat', OneHotEncoder(handle_unknown='ignore', sparse=False), categorical_features)
         ],
         remainder='passthrough'
     )
-    
+
     processed_data = preprocessor.fit_transform(input_df)
     feature_names = preprocessor.get_feature_names_out()
-    processed_df = pd.DataFrame(processed_data.toarray(), columns=feature_names)
-    
+    processed_df = pd.DataFrame(processed_data, columns=feature_names)
+
     return processed_df
 
 def main():
-    st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
-    st.title("🍔 Food Delivery Time Prediction")
+    st.title("Food Delivery Time Prediction")
 
     st.markdown("""
     Predict delivery time based on:
@@ -96,7 +97,7 @@ def main():
         """, unsafe_allow_html=True)
 
         # Feature Importance
-        st.markdown("### 🔍 Top 5 Feature Importance")
+        st.markdown("### Top 5 Feature Importance")
         try:
             if hasattr(model, "coef_"):
                 importance = model.coef_
