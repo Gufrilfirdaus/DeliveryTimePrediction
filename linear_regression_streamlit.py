@@ -73,6 +73,12 @@ with st.sidebar:
     based on historical data and key factors that affect delivery duration.
     """)
     
+    st.markdown("---")
+    st.markdown(
+        "<p style='text-align: center; font-size: 12px; color: grey;'>© 2025 Muhammad Gufril Firdaus</p>",
+        unsafe_allow_html=True
+    )
+    
 # — Main Content
 st.header("Delivery Time Prediction")
 
