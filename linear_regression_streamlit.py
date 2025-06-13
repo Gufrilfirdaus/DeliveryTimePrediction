@@ -1,14 +1,16 @@
 import streamlit as st
-st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")  # <- HARUS di atas
-
 import pandas as pd
 import numpy as np
 import joblib
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
+
+# Set config harus paling atas
+st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
 
 @st.cache_resource
 def load_model():
@@ -40,14 +42,19 @@ def preprocess_input(input_df):
         remainder='passthrough'
     )
     
+    # Fit-transform
     processed_data = preprocessor.fit_transform(input_df)
+
+    # Ambil nama kolom setelah encoding
     feature_names = preprocessor.get_feature_names_out()
-    processed_df = pd.DataFrame(processed_data.toarray(), columns=feature_names)
     
+    # Konversi ke DataFrame
+    processed_df = pd.DataFrame(processed_data.toarray(), columns=feature_names)
+
     return processed_df
 
 def main():
-    st.title("Food Delivery Time Prediction")
+    st.title("🍔 Food Delivery Time Prediction")
 
     st.markdown("""
     Predict delivery time based on:
@@ -99,7 +106,7 @@ def main():
         """, unsafe_allow_html=True)
 
         # Feature Importance
-        st.markdown("### Top 5 Feature Importance")
+        st.markdown("### 🔍 Top 5 Feature Importance")
         try:
             if hasattr(model, "coef_"):
                 importance = model.coef_
