@@ -123,14 +123,27 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("### 📊 Interpretation Guide")
-        col_a, col_b, col_c = st.columns(3)
-        with col_a:
-            st.metric("Fast Delivery", "< 30 min", help="Excellent service timeframe")
-        with col_b:
-            st.metric("Normal Delivery", "30-45 min", help="Standard delivery range")
-        with col_c:
-            st.metric("Delayed Delivery", "> 45 min", help="Consider optimizing operations")
+       st.markdown("### 🔍 Feature Importance")
+
+try:
+    if hasattr(model, "coef_"):  # untuk LinearRegression, Ridge, dsb.
+        importance = model.coef_
+    elif hasattr(model, "feature_importances_"):  # untuk tree-based model
+        importance = model.feature_importances_
+    else:
+        importance = None
+
+    if importance is not None:
+        importance_df = pd.DataFrame({
+            "Feature": processed_input.columns,
+            "Importance": np.abs(importance)  # pakai nilai absolut agar positif semua
+        }).sort_values(by="Importance", ascending=False)
+
+        st.dataframe(importance_df.head(10), use_container_width=True)
+    else:
+        st.info("Model ini tidak mendukung penghitungan feature importance.")
+except Exception as e:
+    st.error(f"Gagal menampilkan feature importance: {e}")
 
 if __name__ == "__main__":
     main()
