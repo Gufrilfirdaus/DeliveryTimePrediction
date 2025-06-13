@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
 import os
 from sklearn.preprocessing import OneHotEncoder
@@ -37,17 +38,18 @@ def preprocess_input(input_df, reference_columns):
         remainder='passthrough'
     )
     
-    # Fit on dummy DataFrame with the same structure (from df)
     dummy_df = df[categorical_features + ['Distance_km', 'Preparation_Time_min', 'Courier_Experience_yrs']].dropna()
     preprocessor.fit(dummy_df)
     
     processed_data = preprocessor.transform(input_df)
-    
-    # Convert to DataFrame with same column names as during training
     encoded_feature_names = preprocessor.get_feature_names_out()
-    processed_df = pd.DataFrame(processed_data.toarray() if hasattr(processed_data, "toarray") else processed_data, columns=encoded_feature_names)
     
-    # Ensure column alignment
+    processed_df = pd.DataFrame(
+        processed_data.toarray() if hasattr(processed_data, "toarray") else processed_data,
+        columns=encoded_feature_names
+    )
+
+    # Pastikan kolom sesuai dengan yang dipakai saat training
     for col in reference_columns:
         if col not in processed_df.columns:
             processed_df[col] = 0
@@ -57,43 +59,40 @@ def preprocess_input(input_df, reference_columns):
 
 def main():
     st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
-    
-    # Header
+
     st.title("🍔 Food Delivery Time Prediction")
     st.markdown("""
     Predict delivery time based on:
-    - **Distance** between restaurant and delivery location
-    - Current **weather conditions**
-    - Road **traffic levels**
-    - Delivery **vehicle type**
+    - **Distance**
+    - **Weather conditions**
+    - **Traffic levels**
+    - **Vehicle type**
     - **Courier experience**
     - **Preparation time**
     """)
-    
-    # Input parameters
+
     st.header("Enter Delivery Parameters")
     col1, col2 = st.columns(2)
-    
+
     with col1:
         distance = st.slider("Distance (km)", 0.5, 20.0, 5.0, 0.1)
         prep_time = st.slider("Preparation Time (minutes)", 5, 30, 15)
         courier_exp = st.slider("Courier Experience (years)", 0, 10, 2)
-    
+
     with col2:
         weather = st.selectbox("Weather Conditions", ["Clear", "Foggy", "Rainy", "Snowy", "Windy"])
         traffic = st.selectbox("Traffic Level", ["Low", "Medium", "High"])
         vehicle = st.selectbox("Vehicle Type", ["Scooter", "Bike", "Car"])
-    
+
     predict_btn = st.button("Predict Delivery Time", type="primary")
-    
+
     st.markdown("---")
     st.subheader("How It Works")
     st.markdown("""
     This predictive model uses machine learning to estimate food delivery times 
     based on historical data and key factors that affect delivery duration.
     """)
-    
-    # Prediction
+
     if predict_btn:
         input_data = pd.DataFrame({
             'Distance_km': [distance],
@@ -104,16 +103,10 @@ def main():
             'Vehicle_Type': [vehicle]
         })
 
-        # Preprocess input
         processed_input = preprocess_input(input_data, cols)
-
-        # Scale numeric features
         processed_scaled = scaler.transform(processed_input)
-
-        # Predict
         prediction = model.predict(processed_scaled)
 
-        # Output
         st.markdown("---")
         st.markdown(f"""
         <div style="background-color:#f0f2f6;padding:20px;border-radius:10px">
@@ -123,27 +116,27 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-       st.markdown("### 🔍 Feature Importance")
+        # Feature Importance Section
+        st.markdown("### 🔍 Feature Importance")
+        try:
+            if hasattr(model, "coef_"):
+                importance = model.coef_
+            elif hasattr(model, "feature_importances_"):
+                importance = model.feature_importances_
+            else:
+                importance = None
 
-try:
-    if hasattr(model, "coef_"):  # untuk LinearRegression, Ridge, dsb.
-        importance = model.coef_
-    elif hasattr(model, "feature_importances_"):  # untuk tree-based model
-        importance = model.feature_importances_
-    else:
-        importance = None
+            if importance is not None:
+                importance_df = pd.DataFrame({
+                    "Feature": processed_input.columns,
+                    "Importance": np.abs(importance)
+                }).sort_values(by="Importance", ascending=False)
 
-    if importance is not None:
-        importance_df = pd.DataFrame({
-            "Feature": processed_input.columns,
-            "Importance": np.abs(importance)  # pakai nilai absolut agar positif semua
-        }).sort_values(by="Importance", ascending=False)
-
-        st.dataframe(importance_df.head(10), use_container_width=True)
-    else:
-        st.info("Model ini tidak mendukung penghitungan feature importance.")
-except Exception as e:
-    st.error(f"Gagal menampilkan feature importance: {e}")
+                st.dataframe(importance_df.head(10), use_container_width=True)
+            else:
+                st.info("Model ini tidak mendukung perhitungan feature importance.")
+        except Exception as e:
+            st.error(f"Gagal menampilkan feature importance: {e}")
 
 if __name__ == "__main__":
     main()
