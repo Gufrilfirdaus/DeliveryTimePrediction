@@ -8,6 +8,8 @@ from sklearn.compose import ColumnTransformer
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
+
 # Load model and scaler
 @st.cache_resource
 def load_model():
@@ -68,8 +70,7 @@ def preprocess_input(input_df, model_columns, scaler):
 
 # Main App
 def main():
-    st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
-    st.title("🍔 Food Delivery Time Prediction")
+    st.title("Food Delivery Time Prediction")
 
     st.markdown("""
     Predict delivery time based on:
