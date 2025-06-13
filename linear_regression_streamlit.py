@@ -135,7 +135,7 @@ def main():
                     "Importance": np.abs(importance)
                 }).sort_values(by="Importance", ascending=False)
 
-                st.dataframe(importance_df.head(10), use_container_width=True)
+                st.dataframe(importance_df.head(5), use_container_width=True)
             else:
                 st.info("Model ini tidak mendukung perhitungan feature importance.")
         except Exception as e:
