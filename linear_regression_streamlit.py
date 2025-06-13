@@ -64,8 +64,15 @@ with st.sidebar:
     - Vehicle type
     - Courier experience
     - Preparation time
+    - Time of Day
     """)
-
+    st.markdown("---")
+    st.subheader("How It Works")
+    st.markdown("""
+    This predictive model uses machine learning to estimate food delivery times 
+    based on historical data and key factors that affect delivery duration.
+    """)
+    
 # — Main Content
 st.header("Delivery Time Prediction")
 
