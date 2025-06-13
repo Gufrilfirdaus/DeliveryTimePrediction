@@ -91,11 +91,11 @@ with st.form("predict_form"):
                              sorted(df['Vehicle_Type'].unique()))
         experience = st.selectbox("Courier Experience (years)", 
                                 sorted(df['Courier_Experience_yrs'].unique()))
-        prep_time = st.number_input("Preparation Time (minutes)",  # Changed to number_input
-                                  min_value=5, 
-                                  max_value=60, 
+        prep_time = st.number_input("Preparation Time (minutes)", 
+                                  min_value=0,  # Diubah menjadi 0
+                                  max_value=120,  # Contoh batas maksimal
                                   value=15, 
-                                  step=5)
+                                  step=1)  # Step 1 menit
         time_of_day = st.selectbox("Time of Day", 
                                  sorted(df['Time_of_Day'].unique()))
     
