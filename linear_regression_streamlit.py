@@ -182,3 +182,9 @@ if submitted:
     top_features["Feature"] = top_features["Feature"].map(feature_names)
     st.dataframe(top_features[["Feature", "Impact"]].set_index("Feature")
                 .style.format("{:.2f}").background_gradient(cmap="RdBu", axis=0))
+
+    st.markdown("---")
+        st.markdown(
+            "<p style='text-align: center; font-size: 12px; color: grey;'>© 2025 Muhammad Gufril Firdaus</p>",
+            unsafe_allow_html=True
+        )
