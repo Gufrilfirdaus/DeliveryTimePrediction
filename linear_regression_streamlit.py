@@ -94,7 +94,6 @@ with st.form("predict_form"):
     with col2:
         st.subheader("Delivery Details")
         vehicle = st.selectbox("Vehicle Type", sorted(df['Vehicle_Type'].unique()))
-        experience = st.selectbox("Courier Experience (years)", sorted(df['Courier_Experience_yrs'].unique()))
         experience = st.number_input("Courier Experience (years)",min_value=0, max_value=30, value=int(df['Courier_Experience_yrs'].median()),step=1)
         prep_time = st.number_input("Preparation Time (minutes)", min_value=0, max_value=120,
                                     value=int(df['Preparation_Time_min'].median()), step=1)       
