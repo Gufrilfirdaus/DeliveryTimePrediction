@@ -92,7 +92,6 @@ def main():
 
     predict_btn = st.button("Predict Delivery Time", type="primary")
 
-  
 
     if predict_btn:
         input_data = pd.DataFrame({
