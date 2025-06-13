@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
-# — Page Configuration
+# — Page Config
 st.set_page_config(page_title="🚚 Delivery Time App", page_icon="🚚", layout="wide")
 
 # — Load Model, Scaler, Columns, Data
@@ -15,20 +15,23 @@ model = joblib.load(os.path.join(base, "linear_reg_model.pkl"))
 scaler = joblib.load(os.path.join(base, "scaler.pkl"))
 cols = joblib.load(os.path.join(base, "linear_reg_model_columns.pkl"))
 df = pd.read_csv(os.path.join(base, "Food_Delivery_Times.csv"))
-for c in ['Courier_Experience_yrs']:
-    df[c].fillna(df[c].median(), inplace=True)
+df['Courier_Experience_yrs'].fillna(df['Courier_Experience_yrs'].median(), inplace=True)
 for c in ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']:
     df[c].fillna(df[c].mode()[0], inplace=True)
 
-# — Tabs: Introduction, EDA, Prediction
+# — Tabs
 tab_intro, tab_eda, tab_pred = st.tabs(["Introduction", "EDA", "Prediction"])
 
+# — Introduction
 with tab_intro:
     st.header("🚀 Introduction")
     st.markdown("""
-    Explore the food delivery dataset, check insights via EDA, and predict delivery time with your custom inputs.
+    This dashboard lets you:
+    1. Explore historical delivery data with comprehensive EDA.
+    2. Predict delivery time based on your custom inputs, powered by a trained Linear Regression model.
     """)
 
+# — EDA
 with tab_eda:
     st.header("📊 Exploratory Data Analysis")
     st.subheader("Dataset Preview")
@@ -62,19 +65,19 @@ with tab_eda:
     sns.histplot(df['Delivery_Time_min'], bins=30, kde=True, ax=ax)
     st.pyplot(fig)
 
+# — Prediction
 with tab_pred:
     st.header("⏱️ Predict Delivery Time")
-    st.markdown("Select parameters below and click **Predict**.")
-    
+    st.markdown("Fill in the fields below and click **Predict**.")
+
     # Input form
-    with st.form("prediction_form"):
-        cols = st.columns(3)
-        weather_opts = sorted({c.split("_",1)[1] for c in cols if c.startswith("Weather_") for cols in [cols]})
-        vehicle_opts = sorted({c.split("_",1)[1] for c in cols if c.startswith("Vehicle_Type_") for cols in [cols]})
-        time_opts = sorted({c.split("_",1)[1] for c in cols if c.startswith("Time_of_Day_") for cols in [cols]})
+    with st.form("predict_form"):
+        col1, col2, col3 = st.columns(3)
+        weather_opts = sorted([c.split("_",1)[1] for c in cols if c.startswith("Weather_")])
+        vehicle_opts = sorted([c.split("_",1)[1] for c in cols if c.startswith("Vehicle_Type_")])
+        time_opts = sorted([c.split("_",1)[1] for c in cols if c.startswith("Time_of_Day_")])
         traffic_map = {'Low':0, 'Medium':1, 'High':2}
 
-        col1, col2, col3 = st.columns(3)
         with col1:
             weather = st.selectbox("Weather", weather_opts)
             traffic = st.selectbox("Traffic Level", list(traffic_map.keys()))
@@ -89,7 +92,7 @@ with tab_pred:
         submit = st.form_submit_button("Predict")
 
     if submit:
-        data = {c: 0 for c in cols}
+        data = {c:0 for c in cols}
         data.update({
             "Distance_km": distance,
             "Courier_Experience_yrs": experience,
@@ -113,4 +116,5 @@ with tab_pred:
         st.table(top)
 
 st.markdown("---")
-st.caption("Built with Streamlit — integrated model + scaler for accurate, user-friendly predictions")
+st.caption("Built with Streamlit — professional layout with tabs, forms, and accurate ML prediction.")
+
