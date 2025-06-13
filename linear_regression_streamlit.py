@@ -1,165 +1,162 @@
+import os
 import streamlit as st
 import pandas as pd
 import joblib
-import os
-import numpy as np
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
-st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
+# — Page Config
+st.set_page_config(
+    page_title="Food Delivery Time Prediction", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+# Custom CSS
+st.markdown("""
+<style>
+    .metric-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
+    .form-container {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# — Load Model and Data
 @st.cache_resource
 def load_model():
     base = os.path.dirname(os.path.abspath(__file__))
-    try:
-        model = joblib.load(os.path.join(base, "linear_reg_model.pkl"))
-        scaler = joblib.load(os.path.join(base, "scaler.pkl"))
-        cols = joblib.load(os.path.join(base, "linear_reg_model_columns.pkl"))
-        return model, scaler, cols
-    except Exception as e:
-        st.error(f"Gagal memuat model: {e}")
-        return None, None, None
+    model = joblib.load(os.path.join(base, "linear_reg_model.pkl"))
+    scaler = joblib.load(os.path.join(base, "scaler.pkl"))
+    cols = joblib.load(os.path.join(base, "linear_reg_model_columns.pkl"))
+    return model, scaler, cols
 
 @st.cache_data
 def load_data():
     base = os.path.dirname(os.path.abspath(__file__))
-    try:
-        df = pd.read_csv(os.path.join(base, "Food_Delivery_Times.csv"))
-        df['Courier_Experience_yrs'].fillna(df['Courier_Experience_yrs'].median(), inplace=True)
-        for c in ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']:
-            df[c].fillna(df[c].mode()[0], inplace=True)
-        return df
-    except Exception as e:
-        st.error(f"Gagal memuat data: {e}")
-        return None
+    df = pd.read_csv(os.path.join(base, "Food_Delivery_Times.csv"))
+    df['Courier_Experience_yrs'].fillna(df['Courier_Experience_yrs'].median(), inplace=True)
+    for c in ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']:
+        df[c].fillna(df[c].mode()[0], inplace=True)
+    return df
 
-model, scaler, model_columns = load_model()
+model, scaler, cols = load_model()
 df = load_data()
 
-def preprocess_input(input_df, model_columns, scaler):
-    input_df = input_df[['Distance_km', 'Preparation_Time_min', 'Courier_Experience_yrs',
-                         'Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']]
-
-    categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']
-    numerical_features = ['Distance_km', 'Preparation_Time_min', 'Courier_Experience_yrs']
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('cat', OneHotEncoder(categories=[
-                ['Clear', 'Foggy', 'Rainy', 'Snowy', 'Windy'],
-                ['Low', 'Medium', 'High'],
-                ['Scooter', 'Bike', 'Car'],
-                ['Morning', 'Afternoon', 'Evening', 'Night']
-            ], handle_unknown='ignore'), categorical_features),
-            ('num', 'passthrough', numerical_features)
-        ]
-    )
-
-    processed_data = preprocessor.fit_transform(input_df)
-    feature_names = preprocessor.get_feature_names_out()
-
-    df_processed = pd.DataFrame(processed_data.toarray() if hasattr(processed_data, 'toarray') else processed_data,
-                                columns=feature_names)
-
-    # Reorder columns to match model_columns and fill missing if any
-    for col in model_columns:
-        if col not in df_processed.columns:
-            df_processed[col] = 0
-    df_processed = df_processed[model_columns]
-
-    if scaler is not None:
-        df_processed = scaler.transform(df_processed)
-
-    return pd.DataFrame(df_processed, columns=model_columns)
-
-def main():
-    st.title("🍕 Food Delivery Time Prediction")
-
+# — Sidebar
+with st.sidebar:
+    st.title("About")
     st.markdown("""
-    This app predicts delivery time based on:
+    Predict food delivery times based on:
     - Distance
-    - Weather
-    - Traffic Level
-    - Vehicle Type
-    - Courier Experience
-    - Preparation Time
-    - Time of Day
+    - Weather conditions
+    - Traffic levels
+    - Vehicle type
+    - Courier experience
+    - Preparation time
     """)
 
-    st.header("Enter Delivery Parameters")
+# — Main Content
+st.header("Delivery Time Prediction")
+
+# Input form
+with st.form("predict_form"):
     col1, col2 = st.columns(2)
-
+    
     with col1:
-        distance = st.number_input("Distance (km)", min_value=0.1, value=5.0, step=0.1)
-        prep_time = st.number_input("Preparation Time (minutes)", min_value=1, value=15, step=1)
-        courier_exp = st.number_input("Courier Experience (years)", min_value=0.0, value=2.0, step=0.5)
-
+        st.subheader("Route Information")
+        distance = st.number_input("Distance (km)", 
+                                 min_value=0.5, 
+                                 max_value=50.0, 
+                                 value=5.0, 
+                                 step=0.5)
+        traffic = st.selectbox("Traffic Level", 
+                             ['Low', 'Medium', 'High'])
+        weather = st.selectbox("Weather Condition", 
+                             sorted(df['Weather'].unique()))
+        
     with col2:
-        weather = st.selectbox("Weather Conditions", ["Clear", "Foggy", "Rainy", "Snowy", "Windy"])
-        traffic = st.selectbox("Traffic Level", ["Low", "Medium", "High"])
-        vehicle = st.selectbox("Vehicle Type", ["Scooter", "Bike", "Car"])
-        time_of_day = st.selectbox("Time of Day", ["Morning", "Afternoon", "Evening", "Night"])
+        st.subheader("Delivery Details")
+        vehicle = st.selectbox("Vehicle Type", 
+                             sorted(df['Vehicle_Type'].unique()))
+        experience = st.selectbox("Courier Experience (years)", 
+                                sorted(df['Courier_Experience_yrs'].unique()))
+        prep_time = st.selectbox("Preparation Time (minutes)", 
+                               sorted(df['Preparation_Time_min'].unique()))
+        time_of_day = st.selectbox("Time of Day", 
+                                 sorted(df['Time_of_Day'].unique()))
+    
+    submitted = st.form_submit_button("Predict Delivery Time", 
+                                    type="primary")
 
-    if st.button("Predict Delivery Time", type="primary"):
-        if model is None or scaler is None or model_columns is None:
-            st.error("Model atau scaler tidak tersedia.")
-            return
-
-        input_data = pd.DataFrame({
-            'Distance_km': [distance],
-            'Preparation_Time_min': [prep_time],
-            'Courier_Experience_yrs': [courier_exp],
-            'Weather': [weather],
-            'Traffic_Level': [traffic],
-            'Vehicle_Type': [vehicle],
-            'Time_of_Day': [time_of_day]
-        })
-
-        try:
-            processed_input = preprocess_input(input_data, model_columns, scaler)
-            prediction = model.predict(processed_input)
-
-            st.markdown("---")
-            st.markdown(f"""
-            <div style="background-color:#f0f2f6;padding:20px;border-radius:10px">
-                <h2 style="color:#2e86c1;text-align:center;">
-                Predicted Delivery Time: {round(prediction[0], 1)} minutes
-                </h2>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown("### 🔍 Top 5 Feature Importance")
-            try:
-                if hasattr(model, "coef_"):
-                    importance = model.coef_
-                elif hasattr(model, "feature_importances_"):
-                    importance = model.feature_importances_
-                else:
-                    importance = None
-
-                if importance is not None:
-                    importance_df = pd.DataFrame({
-                        "Feature": model_columns,
-                        "Importance": np.abs(importance)
-                    }).sort_values(by="Importance", ascending=False).head(5)
-
-                    st.dataframe(importance_df, use_container_width=True)
-
-                    fig, ax = plt.subplots(figsize=(6, 3))
-                    sns.barplot(data=importance_df, x="Importance", y="Feature", palette="Blues_d", ax=ax)
-                    ax.set_title("Top 5 Important Features", fontsize=12)
-                    ax.set_xlabel("Coefficient Magnitude")
-                    ax.set_ylabel("")
-                    st.pyplot(fig)
-                else:
-                    st.info("Model tidak mendukung perhitungan feature importance.")
-            except Exception as e:
-                st.error(f"Gagal menampilkan feature importance: {e}")
-
-        except Exception as e:
-            st.error(f"Gagal melakukan prediksi: {e}")
-
-if __name__ == "__main__":
-    main()
+if submitted:
+    # Prepare input data
+    traffic_map = {'Low':0, 'Medium':1, 'High':2}
+    data = {c:0 for c in cols}
+    data.update({
+        "Distance_km": distance,
+        "Courier_Experience_yrs": experience,
+        "Preparation_Time_min": prep_time,
+        "Traffic_Level": traffic_map[traffic],
+        f"Weather_{weather}": 1,
+        f"Vehicle_Type_{vehicle}": 1,
+        f"Time_of_Day_{time_of_day}": 1,
+    })
+    
+    # Make prediction
+    input_df = pd.DataFrame([data])[cols]
+    x_scaled = scaler.transform(input_df)
+    pred = model.predict(x_scaled)[0]
+    avg = df["Delivery_Time_min"].mean()
+    
+    # Display results
+    st.markdown("---")
+    st.subheader("Results")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("Estimated Delivery Time", 
+                 f"{pred:.1f} minutes")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("Average Delivery Time", 
+                 f"{avg:.1f} minutes",
+                 delta=f"{pred-avg:+.1f} minutes")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Feature importance
+    st.markdown("---")
+    st.subheader("Top Influencing Factors")
+    
+    coeffs = pd.DataFrame({"Feature": cols, "Impact": model.coef_})
+    coeffs["Absolute_Impact"] = coeffs["Impact"].abs()
+    top_features = coeffs.sort_values("Absolute_Impact", ascending=False).head(5)
+    
+    # Format feature names
+    feature_names = {
+        "Distance_km": "Distance (km)",
+        "Preparation_Time_min": "Prep Time (min)",
+        "Traffic_Level": "Traffic Level",
+        "Courier_Experience_yrs": "Courier Exp (yrs)",
+        **{f"Weather_{w}": f"Weather: {w}" for w in df['Weather'].unique()},
+        **{f"Vehicle_Type_{v}": f"Vehicle: {v}" for v in df['Vehicle_Type'].unique()},
+        **{f"Time_of_Day_{t}": f"Time: {t}" for t in df['Time_of_Day'].unique()}
+    }
+    
+    top_features["Feature"] = top_features["Feature"].map(feature_names)
+    st.dataframe(top_features[["Feature", "Impact"]].set_index("Feature")
+                .style.format("{:.2f}").background_gradient(cmap="RdBu", axis=0))
