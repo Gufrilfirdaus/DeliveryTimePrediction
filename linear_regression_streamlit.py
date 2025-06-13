@@ -49,7 +49,6 @@ def preprocess_input(input_df, reference_columns):
         columns=encoded_feature_names
     )
 
-    # Pastikan kolom sesuai dengan yang dipakai saat training
     for col in reference_columns:
         if col not in processed_df.columns:
             processed_df[col] = 0
@@ -60,7 +59,7 @@ def preprocess_input(input_df, reference_columns):
 def main():
     st.set_page_config(page_title="Food Delivery Time Predictor", page_icon="⏱️")
 
-    st.title("🍔 Food Delivery Time Prediction")
+    st.title("Food Delivery Time Prediction")
     st.markdown("""
     Predict delivery time based on:
     - **Distance**
@@ -69,6 +68,13 @@ def main():
     - **Vehicle type**
     - **Courier experience**
     - **Preparation time**
+    """)
+
+    st.markdown("---")
+    st.subheader("How It Works")
+    st.markdown("""
+    This predictive model uses machine learning to estimate food delivery times 
+    based on historical data and key factors that affect delivery duration.
     """)
 
     st.header("Enter Delivery Parameters")
@@ -86,12 +92,7 @@ def main():
 
     predict_btn = st.button("Predict Delivery Time", type="primary")
 
-    st.markdown("---")
-    st.subheader("How It Works")
-    st.markdown("""
-    This predictive model uses machine learning to estimate food delivery times 
-    based on historical data and key factors that affect delivery duration.
-    """)
+  
 
     if predict_btn:
         input_data = pd.DataFrame({
@@ -117,7 +118,7 @@ def main():
         """, unsafe_allow_html=True)
 
         # Feature Importance Section
-        st.markdown("### 🔍 Feature Importance")
+        st.markdown("###Feature Importance")
         try:
             if hasattr(model, "coef_"):
                 importance = model.coef_
