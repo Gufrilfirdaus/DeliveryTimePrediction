@@ -6,22 +6,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
-# ==================== LOAD DATA AND MODEL ====================
+# ==================== LOAD DATA, MODEL, SCALER ====================
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-model_path = os.path.join(current_dir, "linear_reg_model.pkl")
-model_columns_path = os.path.join(current_dir, "linear_reg_model_columns.pkl")
-data_path = os.path.join(current_dir, "Food_Delivery_Times.csv")
+model = joblib.load(os.path.join(current_dir, "linear_reg_model.pkl"))
+scaler = joblib.load(os.path.join(current_dir, "scaler.pkl"))  # ✅ Load scaler
+model_columns = joblib.load(os.path.join(current_dir, "linear_reg_model_columns.pkl"))
+df = pd.read_csv(os.path.join(current_dir, "Food_Delivery_Times.csv"))
 
-try:
-    model = joblib.load(model_path)
-    model_columns = joblib.load(model_columns_path)
-    df = pd.read_csv(data_path)
-except Exception as e:
-    st.error(f"⚠️ Error loading files: {e}")
-    st.stop()
-
-# Preprocess data for EDA
+# Preprocess for EDA
 cat_cols = ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']
 df['Courier_Experience_yrs'] = df['Courier_Experience_yrs'].fillna(df['Courier_Experience_yrs'].median())
 for col in cat_cols:
@@ -29,139 +22,95 @@ for col in cat_cols:
 
 # ==================== STREAMLIT UI ===========================
 st.title("🍔🚚 Food Delivery Time Analysis & Prediction")
-st.markdown("""
-This app provides insights into food delivery times and predicts delivery duration based on various factors.
-""")
+st.markdown("Insights on delivery times + real-time predictions using your inputs.")
 
-# Create tabs for different sections
-tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "🔍 Feature Insights", "⏱️ Delivery Time Prediction"])
+tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "🔍 Feature Insights", "⏱️ Prediction"])
 
 with tab1:
     st.header("Exploratory Data Analysis")
-    st.subheader("Dataset Overview")
-    st.write(f"Total records: {len(df)}")
     st.write(df.describe())
-
-    st.subheader("Delivery Time Distribution")
     fig, ax = plt.subplots()
     sns.histplot(df['Delivery_Time_min'], kde=True, bins=30, ax=ax)
-    ax.set_xlabel('Delivery Time (minutes)')
-    ax.set_ylabel('Frequency')
-    ax.set_title('Distribution of Delivery Times')
     st.pyplot(fig)
-
-    st.write("""
-    **Insight:** Most deliveries take between 40-80 minutes. Outliers may indicate delays due to weather, traffic, or long distances.
-    """)
+    st.write(
+        "**Insight:** Most deliveries fall between ~40–80 minutes. "
+        "Long tails may be due to weather, traffic or distance."
+    )
 
 with tab2:
     st.header("Feature Impact Analysis")
-    st.subheader("How Features Affect Delivery Time")
-    feature = st.selectbox("Select feature to analyze:", 
-        ['Distance_km', 'Preparation_Time_min', 'Courier_Experience_yrs', 
-         'Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day'])
-
+    feature = st.selectbox(
+        "Select feature:", 
+        ['Distance_km','Preparation_Time_min','Courier_Experience_yrs',
+         'Weather','Traffic_Level','Vehicle_Type','Time_of_Day']
+    )
     fig, ax = plt.subplots()
-    if feature in ['Distance_km', 'Preparation_Time_min', 'Courier_Experience_yrs']:
+    if feature in ['Distance_km','Preparation_Time_min','Courier_Experience_yrs']:
         sns.scatterplot(data=df, x=feature, y='Delivery_Time_min', ax=ax)
     else:
         sns.boxplot(data=df, x=feature, y='Delivery_Time_min', ax=ax)
         plt.xticks(rotation=45)
-    ax.set_title(f'Delivery Time vs {feature}')
     st.pyplot(fig)
-
-    st.subheader("Feature Correlation Heatmap")
-    numeric_df = df.select_dtypes(include=[np.number])
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(numeric_df.corr(), annot=True, cmap='coolwarm', ax=ax)
+    fig, ax = plt.subplots(figsize=(10,8))
+    sns.heatmap(df.select_dtypes(include=[np.number]).corr(), annot=True, cmap='coolwarm', ax=ax)
     st.pyplot(fig)
-
-    st.write("""
-    **Key Insights:**
-    - Distance has the strongest correlation with delivery time.
-    - Courier experience slightly reduces delivery time.
-    - Weather and traffic levels affect delivery significantly.
-    """)
+    st.write(
+        "- ✅ `Distance` shows strongest correlation\n"
+        "- 🚗 Longer prep, worse weather/traffic → slower deliveries"
+    )
 
 with tab3:
-    st.header("Delivery Time Prediction")
-    st.markdown("Enter delivery details to estimate the delivery time:")
-
-    weather_options = sorted({col.replace("Weather_", "") for col in model_columns if col.startswith("Weather_")})
-    vehicle_options = sorted({col.replace("Vehicle_Type_", "") for col in model_columns if col.startswith("Vehicle_Type_")})
-    time_options = sorted({col.replace("Time_of_Day_", "") for col in model_columns if col.startswith("Time_of_Day_")})
-
-    traffic_options = ['Low', 'Medium', 'High']
-    traffic_map = {'Low': 0, 'Medium': 1, 'High': 2}
+    st.header("Make a Prediction")
+    st.markdown("Set the parameters below:")
+    # Options
+    weather_opts = sorted({c.split("_",1)[1] for c in model_columns if c.startswith("Weather_")})
+    vehicle_opts = sorted({c.split("_",1)[1] for c in model_columns if c.startswith("Vehicle_Type_")})
+    time_opts = sorted({c.split("_",1)[1] for c in model_columns if c.startswith("Time_of_Day_")})
+    traffic_map = {'Low':0, 'Medium':1, 'High':2}
+    traffic_opts = list(traffic_map.keys())
 
     col1, col2 = st.columns(2)
-
     with col1:
-        weather = st.selectbox("Weather", weather_options)
-        traffic = st.selectbox("Traffic Level", traffic_options)
-        vehicle = st.selectbox("Vehicle Type", vehicle_options)
-
+        weather = st.selectbox("Weather", weather_opts)
+        traffic = st.selectbox("Traffic Level", traffic_opts)
+        vehicle = st.selectbox("Vehicle Type", vehicle_opts)
     with col2:
-        time_of_day = st.selectbox("Time of Day", time_options)
-        experience = st.number_input("Courier Experience (years)", min_value=0, max_value=30, value=2)
-        distance = st.number_input("Delivery Distance (km)", min_value=0.0, value=5.0, step=0.1)
-        prep_time = st.number_input("Food Preparation Time (minutes)", min_value=0, value=10)
+        time_of_day = st.selectbox("Time of Day", time_opts)
+        experience = st.number_input("Courier Experience (yrs)", 0, 30, 2)
+        distance = st.number_input("Distance (km)", 0.0, 100.0, 5.0, 0.1)
+        prep_time = st.number_input("Prep Time (mins)", 0, 60, 10)
 
-    input_dict = {col: 0 for col in model_columns}
-    input_dict["Courier_Experience_yrs"] = experience
+    input_dict = {c:0 for c in model_columns}
+    # Assign values
     input_dict["Distance_km"] = distance
+    input_dict["Courier_Experience_yrs"] = experience
     input_dict["Preparation_Time_min"] = prep_time
     input_dict["Traffic_Level"] = traffic_map[traffic]
     input_dict[f"Weather_{weather}"] = 1
     input_dict[f"Vehicle_Type_{vehicle}"] = 1
     input_dict[f"Time_of_Day_{time_of_day}"] = 1
 
-    input_df = pd.DataFrame([input_dict])
-    input_df = input_df[model_columns]
+    input_df = pd.DataFrame([input_dict])[model_columns]
 
     if st.button("Predict Delivery Time"):
-        try:
-            prediction = model.predict(input_df)[0]
-            st.success(f"⏱️ Estimated delivery time: **{prediction:.2f} minutes**")
+        st.write("🧾 Input Data:", input_df)
+        scaled = scaler.transform(input_df)  # scale before predicting
+        st.write("⚙️ Scaled Input:", scaled)
+        pred = model.predict(scaled)[0]
+        avg = df["Delivery_Time_min"].mean()
+        diff = pred - avg
+        st.success(f"⏱️ Estimated delivery time: {pred:.2f} mins")
+        st.info(f"That's {abs(diff):.2f} minutes {'faster' if diff<0 else 'slower'} than average ({avg:.2f} mins)")
 
-            avg_time = df['Delivery_Time_min'].mean()
-            diff = prediction - avg_time
+        imp = pd.DataFrame({
+            "Feature": model_columns,
+            "Coef": model.coef_
+        }).sort_values("Coef", key=abs, ascending=False).head(5)
+        st.subheader("Top Factors (coefficients):")
+        st.dataframe(imp.set_index("Feature"))
 
-            if prediction < avg_time:
-                st.info(f"📊 This is {abs(diff):.2f} minutes faster than average ({avg_time:.2f} minutes)")
-            else:
-                st.warning(f"📊 This is {diff:.2f} minutes slower than average ({avg_time:.2f} minutes)")
+        st.balloons()
 
-            st.subheader("Key Factors Affecting This Prediction:")
-            try:
-                coefficients = model.coef_
-                feature_names = model_columns
-                importance_df = pd.DataFrame({
-                    'Feature': feature_names,
-                    'Impact': coefficients
-                }).sort_values('Impact', ascending=False)
-
-                active_features = [k for k, v in input_dict.items() if v == 1 and k != 'Preparation_Time_min']
-                active_features.extend(['Distance_km', 'Courier_Experience_yrs', 'Preparation_Time_min', 'Traffic_Level'])
-
-                st.write("Most significant factors for this prediction:")
-                st.dataframe(
-                    importance_df[importance_df['Feature'].isin(active_features)]
-                    .sort_values('Impact', key=abs, ascending=False)
-                    .head(5)
-                )
-            except AttributeError:
-                st.write("(Feature importance not available for this model type)")
-
-            st.balloons()
-
-        except Exception as e:
-            st.error(f"❌ Prediction failed: {e}")
-
+# Footer
 st.markdown("---")
-st.markdown("""
-**About this app:**
-- Built with Streamlit
-- Predicts delivery times using a Linear Regression model
-- Provides insights from EDA and feature analysis
-""")
+st.write("Built with Streamlit • Model + Scaler loaded via joblib")
