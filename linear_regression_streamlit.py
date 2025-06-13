@@ -30,7 +30,7 @@ model, scaler, cols = load_model()
 df = load_data()
 
 def preprocess_input(input_df):
-    categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type']
+    categorical_features = ['Weather', 'Traffic_Level', 'Vehicle_Type', 'Time_of_Day']
     
     preprocessor = ColumnTransformer(
         transformers=[
@@ -54,7 +54,8 @@ def main():
     - **Distance**
     - **Preparation Time**
     - **Courier Experience**
-    - **Weather**, **Traffic**, and **Vehicle Type**
+    - **Weather**, **Traffic**, **Vehicle Type**
+    - **Time of Day**
     """)
 
     st.header("Enter Delivery Parameters")
@@ -69,6 +70,7 @@ def main():
         weather = st.selectbox("Weather Conditions", ["Clear", "Foggy", "Rainy", "Snowy", "Windy"])
         traffic = st.selectbox("Traffic Level", ["Low", "Medium", "High"])
         vehicle = st.selectbox("Vehicle Type", ["Scooter", "Bike", "Car"])
+        time_of_day = st.selectbox("Time of Day", ["Morning", "Afternoon", "Evening", "Night"])
 
     predict_btn = st.button("Predict Delivery Time", type="primary")
 
@@ -79,7 +81,8 @@ def main():
             'Courier_Experience_yrs': [courier_exp],
             'Weather': [weather],
             'Traffic_Level': [traffic],
-            'Vehicle_Type': [vehicle]
+            'Vehicle_Type': [vehicle],
+            'Time_of_Day': [time_of_day]
         })
 
         processed_input = preprocess_input(input_data)
